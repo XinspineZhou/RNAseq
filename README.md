@@ -1,57 +1,104 @@
-# RNAseq
-#!/bin/bash
-#SBATCH --job-name=hisat2_mapping
-#SBATCH --cpus-per-task=10             # 使用10个CPU核心
-#SBATCH --mem=8000MB                  # 每个任务分配8GB内存
-#SBATCH --time=20:00:00               # 最长运行时间为13小时
-#SBATCH --output=/home/xzhou/rnaseq_course/mapping_result/hisat2_mapping_%j.out
-#SBATCH --error=/home/xzhou/rnaseq_course/mapping_result/hisat2_mapping_%j.err
-#SBATCH --partition=pibu_el8          # 使用指定的分区
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=xin.zhou@students.unibe.ch
+# RNA-seq Analysis Pipeline
 
-# 定义参考基因目录和样本列表
-REF_DIR="/home/xzhou/reference_gene"
-samples=("HER22" "HER23" "NonTNBC1" "Normal1" "TNBC1" "NonTNBC2" "Normal2" "TNBC2" "NonTNBC3" "Normal3" "TNBC3")
+This pipeline processes RNA sequencing data, including mapping, differential expression analysis, and gene ontology (GO) enrichment. The pipeline consists of four main steps:
 
-# 创建输出目录
-mkdir -p /home/xzhou/rnaseq_course/mapping_result/sam_to_bam
-mkdir -p /home/xzhou/rnaseq_course/mapping_result/sort_bam
+1. **FastQC, Read Mapping with Hisat2 andGene Quantification with FeatureCounts**
+2. **Gene Ontology Enrichment (GOE)**
+3. **Differential Expression Analysis with DESeq2**
+4. **GO Enrichment Analysis with GoEnrich**
 
-# 循环处理每个样本
-for sample in "${samples[@]}"
-do
-    echo "Processing sample $sample..."
+---
+## 1. FastQC, Read Mapping with Hisat2 andGene Quantification with FeatureCounts
+Step 1: Quality Control with FastQC
 
-    # Step 1: Hisat2 mapping
-    echo "Running Hisat2 for sample $sample..."
-    apptainer exec --bind /data/ /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif bash -c "
-    hisat2 -p 4 -x $REF_DIR/GRCh38_index \
-        -1 /data/courses/rnaseq_course/breastcancer_de/reads/${sample}_R1.fastq.gz \
-        -2 /data/courses/rnaseq_course/breastcancer_de/reads/${sample}_R2.fastq.gz \
-        -S /home/xzhou/rnaseq_course/mapping_result/${sample}_mapped.sam"
+Before proceeding with mapping, FastQC is used to assess the quality of raw sequencing reads.
 
-    # Step 2: Convert SAM to BAM
-    echo "Converting SAM to BAM for sample $sample..."
-    apptainer exec --bind /data/ /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif bash -c "
-    samtools view -@ 1 -bS /home/xzhou/rnaseq_course/mapping_result/${sample}_mapped.sam > \
-        /home/xzhou/rnaseq_course/mapping_result/${sample}_mapped.bam"
-    rm /home/xzhou/rnaseq_course/mapping_result/${sample}_mapped.sam
+Step 2: Read Mapping with HISAT2
+    •    Input: Paired-end FASTQ files (*_R1.fastq.gz, *_R2.fastq.gz).
+    •    Reference Genome: GRCh38 (Indexed with HISAT2).
+    •    Output: Sorted and indexed BAM files.
 
-    # Step 3: Sort BAM file
-    echo "Sorting BAM file for sample $sample..."
-    apptainer exec --bind /data/ /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif bash -c "
-    samtools sort -@ 4 -m 2000M \
-        -T /home/xzhou/rnaseq_course/mapping_result/temp_sort_${sample} \
-        -o /home/xzhou/rnaseq_course/mapping_result/${sample}_sorted.bam \
-        /home/xzhou/rnaseq_course/mapping_result/${sample}_mapped.bam"
+Step 3: Gene Quantification with FeatureCounts
+    •    Input: HISAT2-aligned BAM files.
+    •    Annotation File: Homo_sapiens.GRCh38.113.gtf.
+    •    Output:
+    •    Individual count files for each sample.
+    •    A combined count matrix (output_counts_all_samples.txt) for DESeq2 analysis.
+    
+Usage:  sbatch fastqc_hisat2_mapping.sh
+        sbatch featurecounts.sh
+        
+Script Highlights:
+    •    Uses apptainer to run HISAT2 within a Singularity container.
+    •    Converts SAM to BAM, sorts, and indexes BAM files using samtools.
+    •    Uses FeatureCounts to assign reads to annotated genes.
+    •    Generates gene count tables for differential expression analysis.
+---
 
-    # Step 4: Index BAM file
-    echo "Indexing BAM file for sample $sample..."
-    apptainer exec --bind /data/ /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif bash -c "
-    samtools index /home/xzhou/rnaseq_course/mapping_result/${sample}_sorted.bam"
+## 2. Gene Ontology Enrichment (GOE)
 
-    echo "Completed processing for sample $sample."
-done
+The `GOE.R` script performs gene ontology enrichment analysis on differentially expressed genes.
 
-echo "All samples processed sequentially."
+### **Usage:**
+Run the script in R:
+
+```r
+source("GOE.R")
+```
+
+### **Key Features:**
+- Uses `clusterProfiler` for **GO term enrichment**.
+- Uses `org.Hs.eg.db` for human gene annotations.
+- Generates enrichment plots using `ggplot2`.
+
+---
+
+## 3. Differential Expression Analysis with DESeq2
+
+The `DESeq2.R` script conducts differential expression analysis.
+
+### **Usage:**
+Run the script in R:
+
+```r
+source("DESeq2.R")
+```
+
+### **Key Features:**
+- Uses `DESeq2` to identify differentially expressed genes.
+- Compares **HER2, NonTNBC, TNBC vs. Normal** conditions.
+- Outputs tables of **significant genes**.
+
+---
+
+## 4. GO Enrichment Analysis with GoEnrich
+
+The `GoEnrich.R` script specifically handles GO enrichment for differentially expressed genes.
+
+### **Usage:**
+Run the script in R:
+
+```r
+source("GoEnrich.R")
+```
+
+### **Key Features:**
+- **Extracts** significant genes from DESeq2.
+- **Performs GO enrichment analysis** using `enrichGO()`.
+- **Removes redundant calculations** found in `GOE.R` for efficiency.
+- Outputs **GO enrichment tables** and **visualizations**.
+
+---
+
+## Notes:
+- **Ensure all required R packages are installed** (`ggplot2`, `DESeq2`, `clusterProfiler`, `org.Hs.eg.db`, etc.).
+- **Check for redundant code** in `GoEnrich.R` and `GOE.R`. GOE analysis should be consolidated into `GoEnrich.R`.
+- **Results** will be stored in output directories created during execution.
+
+---
+
+## Citation:
+If using this pipeline, cite the following:
+- **HISAT2**: Kim et al., 2015
+- **DESeq2**: Love et al., 2014
+- **clusterProfiler**: Yu et al., 2012
