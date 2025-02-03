@@ -33,27 +33,10 @@ Script Highlights:
     •    Converts SAM to BAM, sorts, and indexes BAM files using samtools.
     •    Uses FeatureCounts to assign reads to annotated genes.
     •    Generates gene count tables for differential expression analysis.
----
-
-## 2. Gene Ontology Enrichment (GOE)
-
-The `GOE.R` script performs gene ontology enrichment analysis on differentially expressed genes.
-
-### **Usage:**
-Run the script in R:
-
-```r
-source("GOE.R")
-```
-
-### **Key Features:**
-- Uses `clusterProfiler` for **GO term enrichment**.
-- Uses `org.Hs.eg.db` for human gene annotations.
-- Generates enrichment plots using `ggplot2`.
 
 ---
 
-## 3. Differential Expression Analysis with DESeq2
+## 2. Differential Expression Analysis with DESeq2
 
 The `DESeq2.R` script conducts differential expression analysis.
 
@@ -71,7 +54,7 @@ source("DESeq2.R")
 
 ---
 
-## 4. GO Enrichment Analysis with GoEnrich
+## 3. GO Enrichment Analysis with GoEnrich
 
 The `GoEnrich.R` script specifically handles GO enrichment for differentially expressed genes.
 
