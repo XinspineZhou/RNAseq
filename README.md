@@ -3,9 +3,8 @@
 This pipeline processes RNA sequencing data, including mapping, differential expression analysis, and gene ontology (GO) enrichment. The pipeline consists of four main steps:
 
 1. **FastQC, Read Mapping with Hisat2 andGene Quantification with FeatureCounts**
-2. **Gene Ontology Enrichment (GOE)**
-3. **Differential Expression Analysis with DESeq2**
-4. **GO Enrichment Analysis with GoEnrich**
+2. **Differential Expression Analysis with DESeq2**
+3. **GO Enrichment Analysis with GoEnrich**
 
 ---
 ## 1. FastQC, Read Mapping with Hisat2 andGene Quantification with FeatureCounts
